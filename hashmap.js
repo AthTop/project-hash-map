@@ -4,7 +4,7 @@ import LinkedList from "./linked-list.js";
 export default class HashMap {
   #capacity;
   #array;
-  #length;
+  #length = 0;
   #loadFactor;
 
   constructor(capacity = 16, loadFactor) {
@@ -25,12 +25,13 @@ export default class HashMap {
     return hashCode;
   }
 
-  // Private method to expand the hashmap, utilizing the array from entries() 
+  // Private method to expand the hashmap, utilizing the array from entries()
 
   #expand() {
     this.#capacity *= 2;
     const entries = this.entries();
     this.#array = new Array(this.#capacity);
+    this.#length = 0;
     for (const { key, value } of entries) {
       this.set(key, value);
     }
@@ -43,28 +44,27 @@ export default class HashMap {
       this.#expand();
     }
     let node = new Node(key, value);
-    let hashKey = hash(key);
-    let head = this.#array[hashKey];
-    if (head === undefined) {
+    let hashKey = this.hash(key);
+    if (this.#array[hashKey] === undefined) {
       let linkedList = new LinkedList();
+      this.#array[hashKey] = linkedList;
       linkedList.append(node);
-      head = linkedList.head();
       this.#length++;
-    } else if (head.key === key) {
-      head.value = node.value;
+    } else if (this.#array[hashKey].key === key) {
+      this.#array[hashKey].value = node.value;
     } else {
-      let result = head.find(key);
+      let result = this.#array[hashKey].find(key);
       if (result !== null) {
-        head.at(result).value = value;
+        this.#array[hashKey].at(result).value = value;
       } else {
-        head.append(node);
+        this.#array[hashKey].append(node);
         this.#length++;
       }
     }
   }
   // Checks if hashmap has key and returns its value or null
   get(key) {
-    let hashKey = hash(key);
+    let hashKey = this.hash(key);
     if (this.#array[hashKey] !== undefined) {
       let head = this.#array[hashKey];
       let result = head.find(key);
@@ -74,7 +74,7 @@ export default class HashMap {
   }
   // Checks if hashmap has a key and returns true or false
   has(key) {
-    let hashKey = hash(key);
+    let hashKey = this.hash(key);
     let head = this.#array[hashKey];
     if (head !== undefined) {
       let result = head.contains(key);
@@ -85,10 +85,10 @@ export default class HashMap {
   // Removes entry, either by removing it from a linked list or by removing the list itself if there's only 1 entry
   remove(key) {
     if (this.has(key)) {
-      let hashKey = hash(key);
+      let hashKey = this.hash(key);
       let head = this.#array[hashKey];
       if (head.find(key) === 0 && head.size() === 1) {
-        head = undefined;
+        this.#array[hashKey] = undefined;
       } else {
         head.removeAt().find(key);
       }
@@ -107,9 +107,11 @@ export default class HashMap {
   keys() {
     let keys = [];
     for (let i = 0; i < this.#array.length; i++) {
-      LinkedList.traverse(this.#array[i], (cursor) => {
-        keys.push(cursor.key);
-      });
+      if (this.#array[i] !== undefined) {
+        LinkedList.traverse(this.#array[i].head(), (cursor) => {
+          keys.push(cursor.key);
+        });
+      }
     }
     return keys;
   }
@@ -117,9 +119,11 @@ export default class HashMap {
   values() {
     let values = [];
     for (let i = 0; i < this.#array.length; i++) {
-      LinkedList.traverse(this.#array[i], (cursor) => {
-        values.push(cursor.value);
-      });
+      if (this.#array[i] !== undefined) {
+        LinkedList.traverse(this.#array[i].head(), (cursor) => {
+          values.push(cursor.value);
+        });
+      }
     }
     return values;
   }
@@ -127,10 +131,12 @@ export default class HashMap {
   entries() {
     let entries = [];
     for (let i = 0; i < this.#array.length; i++) {
-      LinkedList.traverse(this.#array[i], (cursor) => {
-        let { key, value } = cursor;
-        entries.push({ key, value });
-      });
+      if (this.#array[i] !== undefined) {
+        LinkedList.traverse(this.#array[i].head(), (cursor) => {
+          let { key, value } = cursor;
+          entries.push({ key, value });
+        });
+      }
     }
     return entries;
   }
